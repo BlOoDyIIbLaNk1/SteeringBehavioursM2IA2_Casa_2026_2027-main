@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Validation visuelle Space Survivors</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #080d16; }
+      iframe { width: 100%; height: 100%; border: 0; display: block; }
+    </style>
+  </head>
+  <body>
+    <iframe title="Scénario de validation"></iframe>
+    <script>
+      // Charge la vraie page et ses vrais assets, avec un état reproductible.
+      fetch('../index.html', { cache: 'no-store' }).then(response => response.text()).then(source => {
+        const base = new URL('../', location.href).href;
+        const scenario = new URLSearchParams(location.search).get('scenario') || 'upgrade';
+        const fixture = `<script src="tests/browser-preview.js?v=5" data-scenario="${['combat', 'pause', 'sanctuary', 'arrival', 'boss', 'benchmark', 'transition', 'death'].includes(scenario) ? scenario : 'upgrade'}"><\/script>`;
+        document.querySelector('iframe').srcdoc = source
+          .replace('<head>', `<head><base href="${base}">`)
+          .replace('</body>', `${fixture}</body>`);
+      });
+    </script>
+  </body>
+</html>

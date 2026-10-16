@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Space Survivors</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="game-shell">
+      <aside id="flight-hud" class="flight-hud" aria-label="Instruments de vol" hidden></aside>
+      <div class="hud-performance" aria-label="Images par seconde"><span class="performance-light"></span><span id="hud-fps">60 FPS</span></div>
+      <section id="session-menu" class="session-menu" aria-label="Menu du jeu">
+        <div class="session-card">
+          <div class="menu-brand">S <span>/</span> S</div>
+          <p class="eyebrow">SPACE SURVIVORS · CAMPAGNE</p>
+          <h2 id="session-title">Entre dans le néant.</h2>
+          <p id="session-description">Combat et boss, puis traversée vers une balise. Quinze secteurs pour atteindre le Cœur du Néant.</p>
+          <div class="session-facts"><span>15 <small>SECTEURS</small></span><span>19 <small>ARMES</small></span><span>7 <small>MODULES</small></span></div>
+          <button id="session-action" type="button">DÉCOLLER</button>
+          <p class="controls">Souris : piloter · Échap : pause · M : son</p>
+        </div>
+      </section>
+      <section id="upgrade-menu" class="upgrade-menu" aria-label="Choix d’amélioration" hidden>
+        <div class="upgrade-heading">
+          <p class="eyebrow">ÉVOLUTION DU VAISSEAU</p>
+          <h2>Une nouvelle possibilité.</h2>
+          <p>Choisis un équipement. Reprends-le pour augmenter son niveau.</p>
+        </div>
+        <div id="upgrade-cards" class="upgrade-cards"></div>
+        <p class="upgrade-hint">1 · 2 · 3 pour choisir &nbsp; / &nbsp; ou clique sur une carte</p>
+      </section>
+      <button id="sound-toggle" class="sound-toggle" type="button">SON : ACTIF</button>
+      <label class="debug-switch"><input id="debug-toggle" type="checkbox"> DEBUG · D</label>
+      <div id="debug-legend" class="debug-legend" hidden>DEBUG TP · vert : vitesse · orange : force · cyan : collision · pointillé : freinage</div>
+      <section id="sector-menu" class="sector-menu" aria-label="Secteur terminé" hidden>
+        <div class="sector-card">
+          <p id="sector-complete-label" class="eyebrow"></p>
+          <div class="sector-emblem" aria-hidden="true">✦</div>
+          <h2 id="sector-next-title"></h2>
+          <p id="sector-next-mode" class="sector-next-mode"></p>
+          <p id="sector-next-description"></p>
+          <p id="sector-loadout-summary" class="sector-summary"></p>
+          <button id="sector-continue" type="button">VERS LE NIVEAU SUIVANT ↗</button>
+          <small>ENTRÉE POUR CONTINUER</small>
+        </div>
+      </section>
+      <script src="libraries/p5.min.js"></script>
+      <script src="../1-Seek/vehicle.js"></script>
+      <script src="steering.js"></script>
+      <script src="SpaceVehicle.js"></script>
+      <script src="SpatialGrid.js"></script>
+      <script src="SpriteCache.js"></script>
+      <script src="DebugRenderer.js"></script>
+      <script src="Player.js"></script>
+      <script src="OrbitalCannon.js"></script>
+      <script src="AllyDrone.js"></script>
+      <script src="Enemy.js"></script>
+      <script src="Boss.js"></script>
+      <script src="ArenaGuard.js"></script>
+      <script src="BossArena.js"></script>
+      <script src="Projectile.js"></script>
+      <script src="EnemyProjectile.js"></script>
+      <script src="AttackEffect.js"></script>
+      <script src="SingularityField.js"></script>
+      <script src="ShelterBubble.js"></script>
+      <script src="DestinationGate.js"></script>
+      <script src="Particle.js"></script>
+      <script src="BossDeathEffect.js"></script>
+      <script src="Pickup.js"></script>
+      <script src="UpgradeCatalog.js"></script>
+      <script src="WeaponSystem.js"></script>
+      <script src="AudioSystem.js"></script>
+      <script src="Game.js"></script>
+      <script src="SpaceBackdrop.js"></script>
+      <script src="NavigationHud.js"></script>
+      <script src="Hud.js"></script>
+      <script src="UpgradeMenu.js"></script>
+      <script src="SectorMenu.js"></script>
+      <script src="sketch.js"></script>
+    </main>
+  </body>
+</html>

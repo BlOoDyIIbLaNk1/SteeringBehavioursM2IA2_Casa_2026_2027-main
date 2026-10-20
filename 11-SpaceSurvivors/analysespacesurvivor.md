@@ -80,3 +80,231 @@ Validation du vrai p5.js dans le navigateur : flèche hors champ et à l'approch
 - `BossDeathEffect extends SpaceVehicle` joue pendant 105 mises à jour : vaisseau qui s'efface, noyau lumineux, deux ondes et 24 fragments `Particle`. Le combat s'arrête pendant cette animation, la pause reste possible et le menu n'arrive qu'à son terme. La victoire finale attend aussi cette animation.
 
 Fichiers créés : `SpatialGrid.js`, `SpriteCache.js`, `ArenaGuard.js`, `BossArena.js`, `BossDeathEffect.js`, `DebugRenderer.js` et `SectorMenu.js`. Modifications associées : `Game.js`, `SpaceVehicle.js`, `Player.js`, `Enemy.js`, `Boss.js`, `AllyDrone.js`, `Projectile.js`, `EnemyProjectile.js`, `Particle.js`, `AttackEffect.js`, `SingularityField.js`, `WeaponSystem.js`, `AudioSystem.js`, `Hud.js`, `NavigationHud.js`, `sketch.js`, `index.html`, `style.css`, tests et documentation. Aucun fichier fourni `vehicle.js` n'est modifié.
+
+## Suivi du 19 octobre 2026 — progression et bilans
+
+Échéance annoncée par l'enseignant : mercredi 21 octobre 2026 au soir.
+Priorité choisie : statistiques de fin de secteur et bilan d'expédition.
+
+### Réutilisation conservée
+
+Les classes du monde gardent la chaîne `Vehicle → SpaceVehicle → entités`.
+`Boss` et `ArenaGuard` restent des spécialisations de `Enemy`. Les fonctions
+`seek`, `arrive`, `pursue`, `flee` et `separation`, leurs paramètres, `applyForce`
+et l'intégration héritée ne changent pas. Le canon orbital et les sprites restent
+ceux de la version publiée. Aucun réseau de neurones ni moteur physique ajouté.
+
+### Ajouts propres au jeu
+
+- Nouveau `ProgressStats.js` : service de comptabilité, sans position, dessin du
+  monde ni force. Il conserve des compteurs du secteur courant et de la partie.
+- `Projectile.updateProjectile()` observe les dégâts directs et de zone avant
+  leur application. `Enemy.tickStatus()` observe les brûlures. La contribution des
+  drones alliés entre dans les mêmes totaux que celle des armes du pilote.
+- `Player.damage()` compte seulement la coque effectivement perdue après armure
+  et bouclier; `Player.consumeLevel()` compte chaque niveau réellement obtenu.
+  `AllyDrone.takeDamage()` compte une destruction une seule fois.
+- `Game.collectDrops()` utilise le marqueur existant `dropDone` pour compter les
+  éliminations et les boss. Les gardes invulnérables et les poursuivants encore
+  vivants abandonnés à l'arrivée ne sont pas comptés comme détruits.
+- `Game.completeSector()` fige le bilan et ignore les répétitions. `startWave()`
+  remet uniquement les compteurs du secteur à zéro; `reset()` efface ceux de
+  l'expédition. La victoire finale termine aussi le dernier bilan.
+- `SectorMenu`, `sketch.js`, `index.html` et `style.css` présentent six mesures
+  dans une grille ivoire/sauge : durée, éliminations, dégâts, coque perdue,
+  niveaux gagnés, drones perdus. Le bilan final ajoute secteurs et gardiens.
+  Les chiffres DOM sont construits une fois par bilan et les menus défilent
+  lorsque la hauteur disponible est réduite.
+
+### Difficultés et choix retenus
+
+| Point | Solution et limite |
+| --- | --- |
+| Un tir de 100 sur une cible à 5 PV gonflerait les dégâts. | Compter `min(vie restante, dégâts)` : seuls 5 points sont ajoutés. |
+| Les impacts perforants, gardes et nettoyages peuvent créer des doublons. | Réutiliser les événements d'impact et `dropDone`, exclure les gardes. |
+| Une pause pourrait fausser la durée du secteur. | Compter uniquement les mises à jour actives; durée de simulation à 60 pas/s, pas chronomètre mural. |
+| Un bilan pourrait évoluer pendant sa consultation ou compter deux secteurs. | Copier les compteurs et protéger la finalisation répétée. |
+| L'écran final pourrait garder les chiffres de l'ancienne partie. | Nouvelle instance de statistiques et invalidation du cache lors de `reset()`. |
+
+### Vérifications de cette évolution
+
+Commande : `node --test 11-SpaceSurvivors/tests/*.test.mjs` — quatre fichiers
+de tests réussis, aucun échec. Tests ajoutés pour les dégâts directs/de zone et
+brûlures, la surpuissance, bouclier/invulnérabilité, niveaux, drones, exclusions
+des gardes, boss, victoire finale, pause, temps d'animation, snapshots, changement
+de secteur, remise à zéro, format de durée et cache du menu. Syntaxe JavaScript
+contrôlée avec `node --check`.
+
+Validation navigateur avec le vrai p5.js : bilan de secteur, continuation vers
+le secteur 2, bilan de défaite, nouvelle expédition et écran de victoire (scène
+isolée atteignant directement l'état final, pas une campagne complète jouée).
+Les scènes de vérification
+restent exclusivement dans `tests/browser-preview.*`.
+
+Fichier créé : `ProgressStats.js`. Fichiers modifiés : `Game.js`, `Projectile.js`,
+`Enemy.js`, `Player.js`, `AllyDrone.js`, `SectorMenu.js`, `sketch.js`, `index.html`,
+`style.css`, `tests/combat.test.mjs`, `tests/presentation.test.mjs`,
+`tests/browser-preview.html`, `tests/browser-preview.js`, `README.md` et ce suivi.
+Les fichiers fournis `vehicle.js` restent inchangés. Empreinte de `1-Seek/vehicle.js` :
+`319a07e0d5d08fdd54a79a07a28e2b1e58b62721b0482ea66197b5331985137b`.
+
+## Suivi du 19 octobre 2026 — couronnes et ricochets persistants
+
+Demande : de vraies armes qui tournent autour du pilote, avec un arsenal plus
+spectaculaire à haut niveau et des ricochets qui restent pendant l'expédition.
+
+### Fonctions du TP et ajouts distingués
+
+- Les fonctions existantes `Steering.seek`, `arrive`, `pursue`, `flee`,
+  `separation` et `bounceFromEdges` restent inchangées. `applyForce` et `update`
+  restent hérités du `Vehicle` fourni, appelé une seule fois par mise à jour.
+- `Steering.orbit` est un nouvel assemblage propre au jeu, pas une fonction
+  prétendument fournie dans le TP. Il observe le rayon et la direction locale,
+  choisit une cible devant l'arme et anticipe la vitesse du centre. Il appelle
+  ensuite **la fonction `Steering.arrive` existante**. L'entité compose le résultat
+  avec la séparation existante et limite la force totale à `maxForce`.
+- La lame n'est pas placée à chaque image par sinus/cosinus du temps : sa position
+  vient de la vitesse et de l'accélération. Les angles du constructeur servent
+  uniquement à la disposition initiale des armes, comme pour une formation.
+- Les ricochets réutilisent le steering de bord existant. Leur réflexion et la
+  correction d'une pénétration dans le mur restent des réponses de collision,
+  distinctes du pilotage. La caméra mobile définit les quatre murs visibles.
+
+### Armes fonctionnelles
+
+`OrbitalBlade extends Projectile extends SpaceVehicle extends Vehicle` garde la
+collision, les dégâts, statistiques et effets de `Projectile`. Deux couronnes
+tournent en sens opposés : les lames solaires à l'intérieur et l'essaim à
+l'extérieur. Le niveau augmente nombre, rayon, vitesse et dégâts. Au niveau 8 :
+six lames solaires, quatorze lames d'essaim et +60 % de dégâts d'évolution.
+
+`RicochetProjectile extends Projectile` est permanent : vie, rebonds et impacts
+ne l'épuisent pas. Le niveau ajoute un prisme (maximum huit) et augmente sa vitesse
+de 6,75 à 12 pixels par pas; l'évolution ajoute aussi +60 % de dégâts.
+
+`WeaponSystem.syncPersistent` complète uniquement les places manquantes et
+actualise les armes déjà présentes. Aucun nouveau projectile permanent n'est
+ajouté à chaque tir : maximum 28 pour ces trois équipements. `Game.startWave`
+et l'animation de boss conservent ces armes; `reset` les efface. Le plafond des
+projectiles temporaires les protège au lieu de supprimer les plus anciennes.
+
+### Difficultés résolues
+
+| Problème | Solution |
+| --- | --- |
+| Les lames tournaient brièvement autour d'elles-mêmes puis expiraient. | Couronnes permanentes pilotées par `arrive` et séparation, déplacement hérité. |
+| Une arme permanente épuisait ses impacts ou ne pouvait plus retoucher un boss. | Délai de 24 pas par cible, impacts illimités. |
+| Garder toutes les cibles touchées créerait une accumulation mémoire. | `WeakMap` des délais; aucun historique fort de victimes pour les armes permanentes. |
+| Un rebond hors champ pouvait inverser la vitesse à répétition. | Corriger la pénétration et réfléchir seulement une composante sortante. |
+| Des armes permanentes pourraient s'accumuler ou être effacées au changement de niveau. | Population plafonnée selon le niveau et conservation explicite entre secteurs. |
+
+Fichiers créés : `OrbitalBlade.js`, `RicochetProjectile.js`. Fichiers modifiés :
+`steering.js` (ajout d'orbit uniquement), `Projectile.js`, `WeaponSystem.js`,
+`Game.js`, `UpgradeCatalog.js`, `index.html`, tests de combat et de steering,
+scène navigateur `arsenal`, `README.md` et ce suivi.
+
+Tests : `node --test 11-SpaceSurvivors/tests/*.test.mjs`. Exécution détaillée
+également avec `node 11-SpaceSurvivors/tests/combat.test.mjs` (51 cas réussis) et
+`node 11-SpaceSurvivors/tests/steering.test.mjs` (5 cas réussis). Vérifications :
+forces près/loin/centre, identité du calcul avec `arrive`, sens de rotation,
+1 800 pas d'orbite, 3 000 pas de ricochet, caméra éloignée, retouche à 24 pas,
+héritage du TP, suivi du pilote mobile en vol libre, conservation entre secteurs
+et plafond de 28 armes permanentes.
+Validation dans le vrai p5.js : scénario `arsenal`, 20 lames à environ 114 et
+180 pixels du pilote, huit ricochets persistants, 12 ennemis; environ 60,2 FPS,
+simulation moyenne 0,40 ms et dessin 0,92 ms sur la fenêtre observée. Aucune
+erreur JavaScript remontée. Ce relevé dépend de la machine et de cette scène.
+Contrôle supplémentaire en `benchmark` : boss final phase 3, 101 ennemis,
+deux cages, 19 armes équipées dont les 28 projectiles permanents au maximum.
+Simulation moyenne 0,76 ms, dessin 1,60 ms, HUD 0,09 ms; aucun message d'erreur.
+Le compteur instantané a varié pendant les captures (environ 41 à 65 FPS), donc
+ce test ne constitue pas une garantie de 60 FPS constants dans cette scène.
+Tous les fichiers `vehicle.js` fournis sont conservés sans modification.
+
+## Suivi du 19 octobre 2026 — refuges neutres et debug des armes
+
+Demande : les bulles bleues des traversées doivent protéger le pilote, bloquer
+les ennemis, suspendre ses attaques et fournir un soin de 10 PV. Le debug doit
+également couvrir les armes, puisqu'elles héritent de `Vehicle`.
+
+### Règles ajoutées
+
+- `ShelterBubble` garde son héritage de `SpaceVehicle`. Une charge de soin par
+  bulle rend jusqu'à 10 PV au premier besoin à l'intérieur. Le soin ne dépasse
+  jamais `maxHp` et la charge n'est pas consommée à pleine vie. Rester dedans
+  ou faire des allers-retours ne redonne pas de soin; un nouveau secteur recrée
+  ses propres refuges. La régénération passive est suspendue à l'intérieur.
+- Les ennemis proches reçoivent **la force `Steering.flee` existante**, limitée
+  par leur `maxForce`. Après leur locomotion, la paroi corrige une pénétration
+  éventuelle et retire uniquement la vitesse dirigée vers l'intérieur. Cette
+  collision est distincte du steering et gère aussi le cas du centre exact.
+- `intersectsSegment` teste tout le trajet d'un projectile, pas seulement sa
+  dernière position : même un tir rapide ne traverse pas la bulle. Les tirs
+  temporaires amis et hostiles sont absorbés; les ricochets persistants venus
+  de l'extérieur sont réfléchis sans être détruits.
+- `Game.canAttack()` interdit les tirs du pilote et de ses drones au refuge.
+  Les armes permanentes continuent leur steering et restent visibles mais
+  n'infligent aucun dégât, même à l'extérieur. Les tirs déjà en vol sont aussi
+  inoffensifs pendant cet état. Les brûlures consomment leur durée sans dégâts
+  et les cages actives sont désactivées. Les attaques reprennent à la sortie.
+- Les ailiers situés à l'intérieur sont protégés et ne tirent pas, même lorsque
+  le pilote est déjà ressorti. Les tirs hostiles conservent une référence au jeu
+  pour appliquer les mêmes collisions de refuge.
+
+### Debug et fidélité au TP
+
+La touche D et la case existante affichent désormais le canon orbital, tous les
+projectiles amis (temporaires et permanents) et hostiles. Le renderer lit les
+vitesses, la force effectivement enregistrée par `SpaceVehicle.update`, les
+rayons de collision et les cibles/rayons de freinage mémorisés. Une ligne
+pointillée et un repère matérialisent la cible. Un tir balistique sans force
+ne reçoit pas de force inventée pour le dessin. Aucune fonction de steering
+n'est recalculée dans le renderer. Les fonctions TP et fichiers `vehicle.js`
+restent inchangés.
+
+### Blocages et solutions
+
+| Difficulté | Solution |
+| --- | --- |
+| La seule invulnérabilité laissait les ennemis traverser le refuge. | Fuite préventive + collision de paroi après le mouvement. |
+| Un projectile rapide pourrait sauter la bulle entre deux images. | Intersection du segment parcouru avec le cercle, rayons inclus. |
+| Les armes persistantes permettraient d'attaquer en restant à l'abri. | Autorisation d'attaque vérifiée avant toute collision offensive; mêmes règles pour les drones et brûlures. |
+| Un ricochet arrêté par la paroi pouvait perdre sa vitesse avant réflexion. | Conserver la vitesse incidente, corriger la position, puis réfléchir la composante entrante. |
+| Un soin exécuté à chaque image deviendrait illimité. | Charge unique par refuge, état explicite affiché sur la bulle. |
+
+Fichiers modifiés : `ShelterBubble.js`, `Game.js`, `WeaponSystem.js`,
+`AllyDrone.js`, `Projectile.js`, `Enemy.js`,
+`Boss.js`, `EnemyProjectile.js`, `DebugRenderer.js`, `Hud.js`, `index.html`,
+tests et documentation. Aucun nouveau type d'entité n'est nécessaire.
+
+Tests : `node 11-SpaceSurvivors/tests/combat.test.mjs` — 57 cas réussis;
+`node --test 11-SpaceSurvivors/tests/*.test.mjs` — quatre fichiers réussis.
+Couverture ajoutée : soin unique, plafond et charge à pleine vie, centre exact,
+forces proches/lointaines, exclusion physique, conservation de la vitesse
+tangentielle, segment rapide/tangent, reflet permanent, désarmement, drones,
+brûlures, reprise dehors, cages, absence de régénération continue, debug de tous
+les tirs et absence de mutation de leur physique par le dessin. La scène
+`tests/browser-preview.html?scenario=refuge` permet une entrée/sortie pilotée par
+`arrive` avec bouton de test séparé du jeu normal.
+
+Validation du vrai p5.js : le pilote passe de 60 à 70 PV puis reste à 70,
+80 ennemis entourent le refuge avec zéro intrus, aucune cage active et aucun
+tir temporaire ami émis (11 armes permanentes présentes mais inoffensives).
+La case D affiche les vecteurs/cibles des armes et reste synchronisée avec la
+légende. Ces réglages et boutons de contrôle appartiennent uniquement à la
+page de test, pas à la partie normale.
+La sortie a aussi été vérifiée : état `canAttack=true`, tirs temporaires émis
+et aucun intrus dans les refuges. Pour permettre l'observation de l'aller-retour
+au milieu de 80 ennemis, cette scène de test rend le pilote invulnérable hors du
+refuge; cette immunité de test ne concerne jamais le jeu normal. La protection
+et les dégâts normaux sont vérifiés par les tests automatisés.
+Au retour : état protégé, `canAttack=false`, zéro intrus, uniquement les onze
+armes permanentes inoffensives et vie toujours à 70 PV (pas de second soin).
+
+## Publication — projet 11
+
+Le dépôt présente désormais les projets 11 et 12 dans `README.md` et `PROJETS.md`.
+Space Survivors conserve son entrée indépendante dans `11-SpaceSurvivors/` ;
+SIMvoiture possède une autre adresse dans `12-SIMvoiture/`. Pas de page d'accueil
+commune ni de modification des algorithmes pour cette publication. L'outil vidéo
+annulé n'est pas inclus dans cette mise à jour du dépôt.

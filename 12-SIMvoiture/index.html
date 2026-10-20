@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIMvoiture — Laboratoire de neuroévolution</title>
+  <link rel="stylesheet" href="style.css?v=20261020-course">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">S<span>/</span>12</span><span>SIMVOITURE<small>LABORATOIRE DE NEUROÉVOLUTION</small></span></a>
+    <span class="edition">STEERING BEHAVIORS <span>×</span> NEURAL NETWORKS</span>
+    <span id="engine-status" class="pill">Chargement du moteur…</span>
+  </header>
+  <main>
+    <aside class="settings panel">
+      <div class="eyebrow">LE GARAGE</div>
+      <h1>Apprendre.<br><em>Puis se mesurer.</em></h1>
+      <p class="welcome">Crée ta piste, laisse tes pilotes apprendre, puis mets leur cerveau à l’épreuve.</p>
+      <div class="tabs" role="group" aria-label="Mode">
+        <button id="training-tab" class="active" aria-pressed="true">01 Entraînement</button>
+        <button id="race-tab" aria-pressed="false">02 Course</button>
+      </div>
+      <form id="training-form">
+        <button id="start-training" class="primary wide" type="submit">Démarrer l’entraînement <span>↗</span></button>
+        <label>Nom du cerveau<input id="name" maxlength="40" value="Atlas" required></label>
+        <label>Point de départ<select id="seed-brain"><option value="">Nouveaux cerveaux aléatoires</option></select></label>
+        <p class="hint">Un cerveau sauvegardé recharge aussi ses réglages avant de poursuivre son évolution.</p>
+        <button id="recommended" type="button" class="quiet wide">Retrouver les réglages conseillés</button>
+        <details open>
+          <summary><span>01</span> Les circuits</summary>
+          <label>Où apprendre ?<select id="track-source"><option value="random" selected>De vrais circuits aléatoires</option><option value="fixed">Les 3 circuits de référence</option></select></label>
+          <div id="random-settings">
+            <p class="hint">Le générateur construit une nouvelle boucle, puis la lisse. La graine permet de retrouver exactement cette piste.</p>
+            <div class="fields" id="random-fields"></div>
+            <button id="new-training-track" type="button" class="secondary wide">↻ Générer une autre piste</button>
+            <p class="hint">Les pistes choisies restent fixes pendant une expérience pour comparer les générations équitablement.</p>
+          </div>
+          <div id="track-options" class="track-options" hidden>
+            <label><input type="checkbox" name="track" value="aurora" checked><span>Aurora<small>Anneau · idéal pour débuter</small></span></label>
+            <label><input type="checkbox" name="track" value="lagune"><span>Lagune<small>Courbes et changements d’appui</small></span></label>
+            <label><input type="checkbox" name="track" value="sierra"><span>Sierra<small>Épingles · technique</small></span></label>
+          </div>
+          <p class="hint">Plusieurs pistes : chaque cerveau passe sur chacune avant la sélection.</p>
+          <div class="fields" id="track-fields"></div>
+        </details>
+        <details>
+          <summary><span>02</span> Le réseau neuronal</summary>
+          <div class="fields" id="network-fields"></div>
+          <label class="check"><input id="speedInput" type="checkbox" checked> Ajouter la vitesse aux entrées</label>
+          <label>Couches cachées<input id="hidden" value="12" placeholder="Ex. 16, 12" required></label>
+          <label>Activation cachée<select id="activation"><option value="sigmoid">Sigmoïde · TP d’origine</option><option value="tanh">Tangente hyperbolique</option><option value="relu">ReLU</option></select></label>
+          <p id="architecture" class="architecture"></p>
+          <p class="hint">Deux sorties sigmoïdes : direction et vitesse. Les entrées proviennent des capteurs, jamais du tracé.</p>
+        </details>
+        <details>
+          <summary><span>03</span> Voiture & perception</summary>
+          <div class="fields" id="car-fields"></div>
+        </details>
+        <details>
+          <summary><span>04</span> Évolution génétique</summary>
+          <div class="fields" id="evolution-fields"></div>
+          <label class="check"><input id="autoStop" type="checkbox"> Pause si 60 % réussissent toutes les pistes</label>
+          <p class="hint">Tournoi, copie et mutation gaussienne des poids. Pas de rétropropagation. La graine fixe les tirages d’évolution, pas les poids TensorFlow initiaux.</p>
+        </details>
+        <button class="primary wide" type="submit">Appliquer mes réglages <span>↗</span></button>
+        <p class="hint">Appliquer les réglages démarre une nouvelle population. Sauvegarde ton meilleur cerveau avant.</p>
+      </form>
+      <form id="race-form" hidden>
+        <p class="hint">Sélectionne 2 à 8 cerveaux dans la bibliothèque. Même piste et mêmes limites physiques ; capteurs et réseaux conservés.</p>
+        <label>Circuit<select id="race-track"><option value="random">Circuit généré aléatoirement</option><option value="aurora">Aurora</option><option value="lagune">Lagune</option><option value="sierra">Sierra</option></select></label>
+        <div class="fields" id="race-random-fields"></div>
+        <button id="new-race-track" type="button" class="secondary wide">↻ Une autre graine</button>
+        <div class="fields" id="race-fields"></div>
+        <button type="submit" class="primary wide">Lancer la course <span>↗</span></button>
+        <button id="test-unseen" type="button" class="secondary wide">Tester une piste inédite</button>
+        <p class="hint">Test inédit : coche au moins 1 cerveau. Une graine non utilisée pour son entraînement est choisie, sans modifier ses poids. Réussir une piste ne garantit pas de réussir la suivante.</p>
+        <p class="hint">Course fantôme : pas de collisions entre voitures. Aucun apprentissage pendant la course.</p>
+      </form>
+      <section class="library">
+        <div class="section-title"><h2>Bibliothèque</h2><label class="file-button" for="import-brain">+ Importer</label></div>
+        <input id="import-brain" type="file" accept=".json,application/json" multiple hidden>
+        <div id="brain-list"></div>
+        <button id="save-brain" class="secondary wide" disabled>Enregistrer le meilleur cerveau</button>
+        <p class="hint">Stockage dans ce navigateur. Exporte un JSON pour garder une copie portable.</p>
+      </section>
+    </aside>
+    <section class="workspace">
+      <div class="quick-guide" aria-label="Comment commencer"><span><b>1</b> Choisis ta piste</span><span><b>2</b> Entraîne ton cerveau</span><span><b>3</b> Essaie une piste inédite</span></div>
+      <div class="workspace-heading"><div><div class="eyebrow" id="mode-label">01 / ENTRAÎNEMENT</div><h2 id="track-name">Aurora <span>Circuit d’apprentissage</span></h2></div><span class="live-dot" id="run-state">PRÊT</span></div>
+      <div id="message" role="status" aria-live="polite">Configure ton expérience, puis lance l’entraînement.</div>
+      <div class="telemetry panel">
+        <div><small id="stat-label-1">GÉNÉRATION</small><strong id="stat-1">—</strong></div>
+        <div><small id="stat-label-2">EN PISTE</small><strong id="stat-2">—</strong></div>
+        <div><small id="stat-label-3">MEILLEUR SCORE</small><strong id="stat-3">—</strong></div>
+        <div><small id="stat-label-4">RÉUSSITE / GÉN.</small><strong id="stat-4">—</strong></div>
+      </div>
+      <div class="track-panel panel">
+        <div class="track-toolbar"><span id="circuit-info">AURORA / 01</span><span id="performance">60 Hz · simulation fixe</span></div>
+        <div id="track-canvas"></div>
+        <div class="canvas-footer"><span><i class="key-dot"></i> Sélection · or / Leader · menthe</span><span>Clique sur un bolide pour inspecter son cerveau</span></div>
+      </div>
+      <div class="transport panel">
+        <button id="pause" class="secondary" disabled>Pause</button><button id="step" class="quiet" disabled>+ 1 pas</button>
+        <label>Temps<select id="time-scale"><option value="0.25">¼× · ralenti</option><option value="0.5">½×</option><option value="1" selected>1× · réel</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option><option value="32">32×</option><option value="64">64×</option><option value="128">128×</option><option value="256">256×</option><option value="max">MAX · sans plafond</option></select></label>
+        <label class="check"><input id="debug" type="checkbox" checked> Capteurs <kbd>D</kbd></label>
+        <label class="check"><input id="checkpoints" type="checkbox"> Checkpoints</label>
+      </div>
+      <div class="lower-grid">
+        <section class="panel history-panel"><div class="section-title"><h2>Courbe d’apprentissage</h2><span class="hint">Meilleur / moyenne</span></div><canvas id="history" width="540" height="110" aria-label="Fitness par génération"></canvas><p id="history-caption" class="hint">Chaque point représente une génération évaluée sur tous les circuits choisis.</p></section>
+        <section class="panel ranking-panel"><div class="section-title"><h2 id="ranking-title">Voitures en piste</h2><button id="select-leader" class="quiet">Voir le leader ↗</button></div><div id="standings" class="standings"><p class="hint">Les voitures apparaîtront ici.</p></div></section>
+      </div>
+      <footer>SIM / 12 <span>Perception → réseau → force de steering → Vehicle.update()</span><a href="analyseSIMvoiture.md" target="_blank">Sources & adaptations ↗</a></footer>
+    </section>
+    <aside class="inspector panel">
+      <div class="eyebrow">TÉLÉMÉTRIE EN DIRECT</div><div class="section-title"><h2 id="car-name">Aucune voiture</h2><span class="pill" id="car-state">—</span></div>
+      <p id="car-description" class="hint">Sélectionne une voiture sur la piste ou dans le classement.</p>
+      <canvas id="car-preview" width="280" height="96" aria-label="Livrée du bolide sélectionné" hidden></canvas>
+      <div class="car-stats"><div><small>VITESSE</small><strong id="car-speed">—</strong></div><div><small>CHECKPOINTS</small><strong id="car-checkpoints">—</strong></div><div><small>TOURS</small><strong id="car-laps">—</strong></div><div><small>FITNESS</small><strong id="car-fitness">—</strong></div></div>
+      <div class="inspector-divider"></div><div class="section-title"><h2>Le cerveau</h2><span class="pill" id="network-shape">—</span></div>
+      <canvas id="network" width="340" height="290" aria-label="Activations réelles et connexions pondérées du réseau sélectionné"></canvas>
+      <div class="network-labels"><span>ENTRÉES</span><span>COUCHES CACHÉES</span><span>SORTIES</span></div>
+      <p class="hint">Nœud lumineux = activation forte.<br><span class="positive">Vert : poids positif.</span> <span class="negative">Corail : négatif.</span><br>Les biais sont calculés dans le réseau, pas dessinés.</p>
+      <h3>Ce qu’elle perçoit</h3><div id="sensor-values" class="sensor-values"></div>
+      <h3>Ce qu’elle décide</h3><label class="output-label">Direction <span id="turn-value">—</span></label><meter id="turn-meter" min="0" max="1" value="0.5"></meter><label class="output-label">Accélération cible <span id="throttle-value">—</span></label><meter id="throttle-meter" min="0" max="1" value="0.5"></meter>
+      <p class="hint">Debug D : rayons dorés (corail près d’un mur), vitesse verte, force orange. La ligne menthe indique le prochain checkpoint, sans piloter la voiture.</p>
+      <p class="hint">La direction fait tourner la vitesse désirée. La force résultante reste limitée à maxForce, puis la locomotion héritée déplace la voiture.</p>
+    </aside>
+  </main>
+  <script src="vendor/p5.min.js"></script>
+  <script src="vendor/tf.min.js"></script>
+  <script src="../1-Seek/vehicle.js"></script>
+  <script src="../9b%20-%20Voiture%20suit%20circuit%20version%202/js/NeuralNetwork.js"></script>
+  <script src="../9b%20-%20Voiture%20suit%20circuit%20version%202/js/Ray.js"></script>
+  <script src="../9b%20-%20Voiture%20suit%20circuit%20version%202/js/Track.js"></script>
+  <script src="../9b%20-%20Voiture%20suit%20circuit%20version%202/js/utils.js"></script>
+  <script src="Config.js"></script>
+  <script src="DenseInference.js"></script>
+  <script src="Brain.js"></script>
+  <script src="TrackWall.js"></script>
+  <script src="WallIndex.js"></script>
+  <script src="CircuitGenerator.js"></script>
+  <script src="Track.js?v=20261020-course"></script>
+  <script src="CarRenderer.js?v=20261020-course"></script>
+  <script src="SimCar.js?v=20261020-course"></script>
+  <script src="BrainStore.js"></script>
+  <script src="Evolution.js"></script>
+  <script src="Race.js"></script>
+  <script src="NetworkView.js"></script>
+  <script src="SimulationClock.js"></script>
+  <script src="TrackRenderer.js?v=20261020-course"></script>
+  <script src="UI.js?v=20261020-course"></script>
+  <script src="sketch.js"></script>
+</body>
+</html>

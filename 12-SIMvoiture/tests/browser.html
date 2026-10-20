@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>SIMvoiture — Tests navigateur</title>
+  <style>
+    body { background:#0b1118; color:#e6e9e8; font:14px system-ui; margin:20px; }
+    button { background:#e6c98e; border:0; padding:12px; cursor:pointer; }
+    #results { white-space:pre-wrap; color:#8ed1b8; }
+    iframe { border:1px solid #354451; width:100%; height:950px; }
+  </style>
+</head>
+<body>
+  <h1>Vérification intégrée — p5.js + TensorFlow.js réels</h1>
+  <p>Bibliothèque de test isolée. Aucun cerveau utilisateur n’est remplacé.</p>
+  <button id="run">Exécuter les tests d’interface</button>
+  <pre id="results" aria-live="polite">Prêt.</pre>
+  <iframe id="app" src="../index.html?qa=1" title="Simulation de test"></iframe>
+  <script src="browser.js?v=20261020-course"></script>
+</body>
+</html>

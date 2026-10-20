@@ -17,6 +17,10 @@
           <h2 id="session-title">Entre dans le néant.</h2>
           <p id="session-description">Combat et boss, puis traversée vers une balise. Quinze secteurs pour atteindre le Cœur du Néant.</p>
           <div class="session-facts"><span>15 <small>SECTEURS</small></span><span>19 <small>ARMES</small></span><span>7 <small>MODULES</small></span></div>
+          <section id="session-results" class="session-results" aria-label="Bilan de l’expédition" hidden>
+            <p id="session-results-caption" class="eyebrow"></p>
+            <dl id="session-results-grid" class="result-grid"></dl>
+          </section>
           <button id="session-action" type="button">DÉCOLLER</button>
           <p class="controls">Souris : piloter · Échap : pause · M : son</p>
         </div>
@@ -32,7 +36,7 @@
       </section>
       <button id="sound-toggle" class="sound-toggle" type="button">SON : ACTIF</button>
       <label class="debug-switch"><input id="debug-toggle" type="checkbox"> DEBUG · D</label>
-      <div id="debug-legend" class="debug-legend" hidden>DEBUG TP · vert : vitesse · orange : force · cyan : collision · pointillé : freinage</div>
+      <div id="debug-legend" class="debug-legend" hidden>DEBUG TP · vaisseaux et armes · vert : vitesse · orange : force · cyan : collision · pointillé : cible et freinage</div>
       <section id="sector-menu" class="sector-menu" aria-label="Secteur terminé" hidden>
         <div class="sector-card">
           <p id="sector-complete-label" class="eyebrow"></p>
@@ -40,6 +44,7 @@
           <h2 id="sector-next-title"></h2>
           <p id="sector-next-mode" class="sector-next-mode"></p>
           <p id="sector-next-description"></p>
+          <dl id="sector-results" class="result-grid" aria-label="Bilan du secteur"></dl>
           <p id="sector-loadout-summary" class="sector-summary"></p>
           <button id="sector-continue" type="button">VERS LE NIVEAU SUIVANT ↗</button>
           <small>ENTRÉE POUR CONTINUER</small>
@@ -60,6 +65,8 @@
       <script src="ArenaGuard.js"></script>
       <script src="BossArena.js"></script>
       <script src="Projectile.js"></script>
+      <script src="OrbitalBlade.js"></script>
+      <script src="RicochetProjectile.js"></script>
       <script src="EnemyProjectile.js"></script>
       <script src="AttackEffect.js"></script>
       <script src="SingularityField.js"></script>
@@ -71,6 +78,7 @@
       <script src="UpgradeCatalog.js"></script>
       <script src="WeaponSystem.js"></script>
       <script src="AudioSystem.js"></script>
+      <script src="ProgressStats.js"></script>
       <script src="Game.js"></script>
       <script src="SpaceBackdrop.js"></script>
       <script src="NavigationHud.js"></script>

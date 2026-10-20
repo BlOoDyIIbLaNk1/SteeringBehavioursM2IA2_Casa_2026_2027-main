@@ -27,8 +27,16 @@ La campagne compte quinze secteurs qui alternent deux objectifs. Aux secteurs
 impairs, éliminer la vague (patrouilles, formations ou chasseurs), puis son boss.
 Aux secteurs pairs, suivre la flèche et atteindre la balise, active dès le début,
 pendant l'arrivée de renforts ennemis. Il n'est pas nécessaire de tuer toute la
-horde pour terminer une traversée. Deux bulles, au départ et à mi-chemin, annulent
-les dégâts lorsque le pilote est dedans.
+horde pour terminer une traversée. Deux bulles, au départ et à mi-chemin,
+fournissent des refuges neutres. Les ennemis ne peuvent pas y entrer et les tirs
+qui touchent la paroi sont absorbés. Une charge de soin de +10 PV par bulle
+(plafonnée à la vie maximale) est utilisée au premier besoin, jamais à pleine vie.
+Le soin ne se répète pas en restant dedans ou en ressortant/rentrant.
+À l'intérieur : aucun tir du pilote ni des drones, aucune régénération continue,
+aucun dégât des armes déjà actives, brûlures suspendues et cages désactivées.
+Les couronnes et ricochets restent présents et leur steering continue; ils
+redeviennent offensifs après la sortie. Un ricochet extérieur rebondit sur le
+refuge au lieu de disparaître. Les ailiers à l'intérieur sont aussi protégés.
 
 La flèche reste dans l'écran, tourne vers la destination et affiche distance et
 progression. Le secteur 15 se termine par le boss final « Cœur du Néant ».
@@ -47,6 +55,10 @@ Les intervalles de tir sont réduits d'environ 18 %. La barre d'XP occupe toute 
 largeur du bas de l'écran. D ou la case « DEBUG · D » affiche vitesse, force
 composée, collision et cercles de freinage/perception. Ce diagnostic lit les états
 enregistrés sans appliquer de force et ignore les saisies dans les contrôles.
+Le debug concerne aussi toutes les armes : canon orbital, lames, ricochets,
+missiles, tirs simples et tirs hostiles. Une ligne pointillée indique leur cible
+de steering lorsqu'elle existe. Un tir balistique sans accélération montre sa
+vitesse et sa collision; aucune force artificielle n'est calculée pour le debug.
 
 Les sprites et leurs teintes, les halos et les anneaux détaillés sont préparés une
 seule fois dans `SpriteCache.js`. `SpatialGrid.js` limite les recherches de voisins
@@ -55,17 +67,38 @@ hors champ est écarté. Les règles de steering et la locomotion restent celles
 l'architecture TP. Les scénarios `benchmark`, `transition` et `death` de la page
 de validation permettent de vérifier respectivement charge, menu et explosion.
 
-Au niveau 8, les projectiles du laser, des missiles, des ricochets, des lames,
-du pulse et de la nova gagnent 60 % de dégâts et traversent trois ennemis distincts.
+Au niveau 8, les projectiles du laser, des missiles, du pulse et de la nova
+gagnent 60 % de dégâts et traversent trois ennemis distincts.
 Le canon de départ est un véhicule orbital piloté par `arrive` : il tourne autour
 du joueur, tire depuis sa propre position et accélère sa rotation ainsi que ses
 projectiles à chaque niveau. Le laser évolué tire trois faisceaux. La vitesse du
-prisme ricochet progresse de 6,75 à 12 pixels par mise à jour; son évolution
-dispose aussi de douze rebonds.
+prisme ricochet progresse de 6,75 à 12 pixels par mise à jour.
+Les ricochets restent actifs sans limite de durée, de rebonds ni de perforation,
+avec un prisme supplémentaire par niveau (huit au maximum).
 Les équipements maximisés sont retirés des choix suivants. Si tout est au maximum,
 coque et bouclier proposent une restauration sans dépasser le niveau 8.
-La marque d'évolution orbitale reste préparatoire : cette arme émet
-encore des lames temporaires et n'est pas un véritable drone permanent.
+Les lames solaires et l'essaim sont deux couronnes permanentes en sens opposés.
+Au niveau 8, elles atteignent six et quatorze lames; vitesse, portée et dégâts
+progressent avec le niveau, avec +60 % de dégâts à l'évolution. Chaque lame suit
+une cible choisie localement par `Steering.orbit`, qui réutilise `arrive`; la
+séparation utilise la règle existante. Aucun déplacement par angle/temps imposé.
+Les rebonds relèvent d'une réponse de collision, accompagnée du steering de bord.
+Ces armes restent présentes entre les secteurs jusqu'à la nouvelle expédition.
+Elles peuvent retoucher la même cible toutes les 24 mises à jour au minimum.
+Le scénario `tests/browser-preview.html?scenario=arsenal` montre le niveau maximal.
+
+## Bilans de progression
+
+Les menus de fin de secteur présentent désormais un bilan : temps de combat,
+ennemis détruits, dégâts infligés, coque perdue, niveaux gagnés et drones perdus.
+La défaite et la victoire affichent les totaux de l'expédition ainsi que le nombre
+de secteurs et de gardiens terminés. Les dégâts incluent les tirs des alliés,
+les explosions et les brûlures, sans compter la surpuissance au-delà de la vie
+restante. Les gardes invulnérables libérés par la mort d'un boss sont exclus.
+Le temps correspond aux pas de simulation actifs à 60 pas/seconde; menus, pause
+et animation finale du boss sont exclus. Les statistiques restent en mémoire
+jusqu'à la nouvelle expédition; elles ne sont pas sauvegardées après rechargement.
+Les scénarios `transition`, `results` et `victory` permettent de vérifier ces menus.
 
 ## Tests
 

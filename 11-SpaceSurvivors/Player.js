@@ -29,6 +29,7 @@ class Player extends SpaceVehicle {
     amount *= 1 - this.armor;
     const absorbed = Math.min(this.shield, amount);
     this.shield -= absorbed;
+    this.game?.stats?.add('hullLost', Math.min(Math.max(0, this.hp), amount - absorbed));
     this.hp -= amount - absorbed;
     this.invulnerableUntil = millis() + 450;
     if (this.hp <= 0) this.dead = true;
@@ -45,6 +46,7 @@ class Player extends SpaceVehicle {
     if (this.xp < needed) return false;
     this.xp -= needed;
     this.level++;
+    this.game?.stats?.add('levels');
     if (this.level % 2 === 0) this.game?.spawnAllyDrone?.();
     return true;
   }

@@ -13,6 +13,8 @@ class Enemy extends SpaceVehicle {
   tickStatus() {
     if (this.burnFrames > 0) {
       this.burnFrames--;
+      if (this.game?.canAttack?.() === false) return;
+      this.game?.stats?.recordDamage(this, this.burnDamage / 60);
       this.hp -= this.burnDamage / 60;
       if (this.hp <= 0) this.dead = true;
     }
@@ -53,7 +55,9 @@ class Enemy extends SpaceVehicle {
     this.shootCooldown--;
     if (this.shootCooldown > 0) return;
     const direction = p5.Vector.sub(player.pos, this.pos).setMag(4.2);
-    enemyProjectiles.push(new EnemyProjectile(this.pos.x, this.pos.y, direction, this.kind === 'elite' ? 14 : 8));
+    const shot = new EnemyProjectile(this.pos.x, this.pos.y, direction, this.kind === 'elite' ? 14 : 8);
+    shot.game = this.game;
+    enemyProjectiles.push(shot);
     this.shootCooldown = this.kind === 'elite' ? 75 : 115;
   }
 

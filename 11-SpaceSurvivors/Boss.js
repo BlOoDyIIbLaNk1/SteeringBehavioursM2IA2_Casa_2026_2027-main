@@ -39,6 +39,7 @@ class Boss extends Enemy {
         const direction = p5.Vector.fromAngle(angle).setMag(2.4 + this.phase * 0.3);
         const shot = new EnemyProjectile(this.pos.x, this.pos.y, direction, 6 + this.phase * 2);
         shot.homing = false;
+        shot.game = this.game;
         enemyProjectiles.push(shot);
       }
     }

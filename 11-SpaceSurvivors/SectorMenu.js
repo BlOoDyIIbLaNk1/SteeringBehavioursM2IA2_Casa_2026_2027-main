@@ -1,8 +1,15 @@
 class SectorMenu {
-  constructor() { this.root = document.getElementById('sector-menu'); }
+  constructor() {
+    this.root = document.getElementById('sector-menu');
+    this.lastResult = null;
+  }
   update(game) {
     this.root.hidden = !game.sectorComplete;
     if (this.root.hidden) return;
+    if (this.lastResult !== game.sectorComplete) {
+      this.lastResult = game.sectorComplete;
+      document.getElementById('sector-results').innerHTML = ProgressStats.markup(game.sectorComplete.result);
+    }
     const next = game.sectorComplete.next;
     document.getElementById('sector-complete-label').textContent = `SECTEUR ${String(game.wave).padStart(2, '0')} TERMINÉ`;
     document.getElementById('sector-next-title').textContent = `Cap sur le secteur ${String(next.sector).padStart(2, '0')}.`;

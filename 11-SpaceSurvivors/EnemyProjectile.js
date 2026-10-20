@@ -10,7 +10,10 @@ class EnemyProjectile extends SpaceVehicle {
   }
 
   updateAgainst(targets) {
+    if (this.life <= 0) return false;
     if (!Array.isArray(targets)) targets = [targets];
+    this.game = this.game || targets[0]?.game;
+    const start = this.pos.copy();
     let target = null;
     let nearestSq = Infinity;
     for (const candidate of targets) {
@@ -25,6 +28,7 @@ class EnemyProjectile extends SpaceVehicle {
     if (this.homing && target) this.applyForce(Steering.seek(this, target.pos, this.maxSpeed, 0.08));
     super.update();
     this.life--;
+    if (this.game?.blockProjectile?.(this, start)) return false;
     for (const candidate of targets) {
       const dx = candidate.pos.x - this.pos.x;
       const dy = candidate.pos.y - this.pos.y;

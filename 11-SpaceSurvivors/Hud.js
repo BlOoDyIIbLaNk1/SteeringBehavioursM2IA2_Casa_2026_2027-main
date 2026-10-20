@@ -72,7 +72,9 @@ class Hud {
     const sector = game.sector;
     set('hud-objective-title', sector?.title?.toLocaleUpperCase('fr') || 'EN ATTENTE');
     const sheltered = game.isSheltered?.(player.pos) || false;
-    const objectiveDetail = game.destination
+    const refuge = game.routeShelters?.find(bubble => bubble.protects(player.pos));
+    const objectiveDetail = sheltered ? `Zone neutre · armes suspendues · ${refuge?.healUsed ? 'soin utilisé' : '+10 PV disponibles'}`
+      : game.destination
       ? `Suivez la flèche · ${Math.round(game.destination.distanceTo(player))} m`
       : game.bossDeath ? 'Gardien détruit · onde de choc.' : game.bossSpawned ? 'Cercle verrouillé · abattez le boss.' : `Vague ennemie · ${game.enemies.length} signatures`;
     set('hud-objective-detail', objectiveDetail);

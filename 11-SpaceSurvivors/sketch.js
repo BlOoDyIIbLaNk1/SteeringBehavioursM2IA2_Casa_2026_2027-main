@@ -131,6 +131,14 @@ function updateSessionMenu() {
   const title = document.getElementById('session-title');
   const description = document.getElementById('session-description');
   const action = document.getElementById('session-action');
+  document.getElementById('session-results').hidden = !game.gameOver;
+  document.querySelector('.session-facts').hidden = game.gameOver;
+  if (game.gameOver && !game.resultsRendered) {
+    document.getElementById('session-results-grid').innerHTML = ProgressStats.markup(game.stats.snapshot());
+    document.getElementById('session-results-caption').textContent =
+      `${game.stats.total.sectors} / 15 SECTEURS · ${game.stats.total.bosses} GARDIENS VAINCUS`;
+    game.resultsRendered = true;
+  }
   if (game.gameOver) {
     title.textContent = game.victory ? 'Némésis vaincue.' : 'Signal perdu.';
     description.textContent = game.victory ? 'Les quinze secteurs sont terminés. La galaxie respire à nouveau.' : `Secteur ${game.wave} · Niveau ${game.player.level}. Reconstruis ton arsenal et repars au combat.`;

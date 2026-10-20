@@ -9,6 +9,23 @@ class WeaponSystem {
 
   interval(frames, minimum = 6) { return Math.max(minimum, Math.round(frames * this.cadenceFactor)); }
 
+  syncPersistent(player, projectiles) {
+    for (const name of ['sword', 'orbit', 'ricochet']) {
+      const level = this.levels[name];
+      if (!level) continue;
+      const count = name === 'ricochet' ? level
+        : name === 'sword' ? 1 + Math.ceil(level / 2) + (level === 8 ? 1 : 0)
+          : 2 + level + (level === 8 ? 4 : 0);
+      const current = projectiles.filter(shot => shot.persistent && (shot.weaponName || shot.style) === name);
+      for (const shot of current) shot.configure(level);
+      for (let index = current.length; index < count; index++) {
+        projectiles.push(name === 'ricochet'
+          ? new RicochetProjectile(player, level, p5.Vector.fromAngle(index * TWO_PI / count + 0.35))
+          : new OrbitalBlade(player, name, index, count, level));
+      }
+    }
+  }
+
   upgradeOptions(rng = Math.random) {
     const pool = Object.keys(this.levels).filter(name => this.levels[name] < 8);
     for (let index = pool.length - 1; index > 0; index--) {
@@ -50,6 +67,8 @@ class WeaponSystem {
     };
     if (!this.primaryCannon) this.primaryCannon = new OrbitalCannon(player);
     this.primaryCannon.updateCannon(this.levels.laser || 1);
+    this.syncPersistent(player, projectiles);
+    if (player.game?.canAttack?.() === false) return;
 
     const add = (v, damage, style, config = {}, origin = player.pos) => {
       projectiles.push(new Projectile(origin.x, origin.y, v, damage, style));
@@ -80,15 +99,6 @@ class WeaponSystem {
       }
     }
     if (this.levels.missile && now % this.interval(Math.max(30, 100 - this.levels.missile * 8)) === 0) add(createVector(random(-1, 1), -4), 25 + this.levels.missile * 7, 'missile');
-    if (this.levels.ricochet && now % this.interval(Math.max(20, 85 - this.levels.ricochet * 7)) === 0) {
-      const ricochetSpeed = 6 + this.levels.ricochet * 0.75;
-      add(p5.Vector.random2D().setMag(ricochetSpeed), 18 + this.levels.ricochet * 5, 'ricochet');
-    }
-    if (this.levels.sword && now % this.interval(Math.max(18, 70 - this.levels.sword * 6)) === 0) add(p5.Vector.fromAngle(now * 0.12).setMag(3), 35 + this.levels.sword * 10, 'sword');
-    if (this.levels.orbit && now % 3 === 0) {
-      const angle = now * 0.04;
-      add(p5.Vector.fromAngle(angle).setMag(3), 4 + this.levels.orbit * 2, 'sword');
-    }
     if (this.levels.pulse && now % this.interval(Math.max(50, 130 - this.levels.pulse * 10)) === 0) {
       for (let i = 0; i < 8; i++) add(p5.Vector.fromAngle(i * TWO_PI / 8).setMag(5), 12 + this.levels.pulse * 4, 'pulse');
     }

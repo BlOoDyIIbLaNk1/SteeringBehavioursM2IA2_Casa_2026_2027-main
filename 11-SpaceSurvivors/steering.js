@@ -56,6 +56,18 @@ const Steering = {
     return p5.Vector.sub(force, agent.vel).limit(agent.maxForce);
   },
 
+  // Sélection d'une cible locale, puis réutilisation d'arrive du TP.
+  // Aucune position imposée ni trajectoire calculée à partir du temps.
+  orbit(agent, center, radius, direction = 1, speed = agent.maxSpeed) {
+    const radial = p5.Vector.sub(agent.pos, center.pos);
+    const distance = radial.mag();
+    if (distance === 0) { radial.x = 1; radial.y = 0; }
+    else radial.div(distance);
+    const tangent = createVector(-radial.y * direction, radial.x * direction).mult(speed * 6);
+    const target = center.pos.copy().add(radial.mult(radius)).add(tangent).add(center.vel.copy().mult(6));
+    return Steering.arrive(agent, target, agent.maxSpeed * 6);
+  },
+
   bounceFromEdges(agent, margin = 60) {
     const force = createVector(0, 0);
     const bounds = agent.game?.cameraBounds || { left: 0, right: width, top: 0, bottom: height };

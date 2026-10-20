@@ -16,8 +16,8 @@
       fetch('../index.html', { cache: 'no-store' }).then(response => response.text()).then(source => {
         const base = new URL('../', location.href).href;
         const scenario = new URLSearchParams(location.search).get('scenario') || 'upgrade';
-        const fixture = `<script src="tests/browser-preview.js?v=5" data-scenario="${['combat', 'pause', 'sanctuary', 'arrival', 'boss', 'benchmark', 'transition', 'death'].includes(scenario) ? scenario : 'upgrade'}"><\/script>`;
-        document.querySelector('iframe').srcdoc = source
+        const fixture = `<script src="tests/browser-preview.js?v=10" data-scenario="${['combat', 'pause', 'sanctuary', 'arrival', 'boss', 'benchmark', 'transition', 'death', 'results', 'victory', 'arsenal', 'refuge'].includes(scenario) ? scenario : 'upgrade'}"><\/script>`;
+        document.querySelector('iframe').srcdoc = source.replace(/src="([^"]+\.js)"/g, 'src="$1?v=refuges-20261019"')
           .replace('<head>', `<head><base href="${base}">`)
           .replace('</body>', `${fixture}</body>`);
       });

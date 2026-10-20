@@ -44,6 +44,25 @@ test('seek renvoie une force nulle sur une cible confondue', () => {
   assert.equal(force.mag(), 0);
 });
 
+test('orbite: arrive du TP est réutilisé, force bornée près/loin/centre et sens inverses', () => {
+  const center = {pos: createVector(0, 0), vel: createVector(1, 0)};
+  for (const x of [0, 20, 100, 5000]) {
+    const agent = {pos: createVector(x, 0), vel: createVector(0, 0), maxSpeed: 12, maxForce: 0.8};
+    const expected = Steering.arrive(agent, createVector(106, 24), 72);
+    const force = Steering.orbit(agent, center, 100, 1, 4);
+    assert.ok(force.mag() <= 0.8 + 1e-9);
+    assert.ok(Number.isFinite(force.x) && Number.isFinite(force.y));
+    assert.ok(Math.abs(force.x - expected.x) < 1e-9);
+    assert.ok(Math.abs(force.y - expected.y) < 1e-9);
+    const reverse = Steering.orbit(agent, center, 100, -1, 4);
+    assert.ok(force.y > 0 && reverse.y < 0);
+    if (x === 20) assert.ok(force.x > 0);
+    if (x === 5000) assert.ok(force.x < 0);
+  }
+  assert.equal(center.pos.x, 0);
+  assert.equal(center.vel.x, 1);
+});
+
 test('arrive produit les mêmes forces que le TP, près, loin et sur la cible', () => {
   const reference = new TPVehicle(0, 0);
   reference.maxSpeed = 5;

@@ -32,13 +32,110 @@ function load() {
     floor: Math.floor, TWO_PI: Math.PI * 2, mouseX: 640, mouseY: 360,
     millis: () => 1000, AudioSystem: class { boss() {} levelUp() {} hit() {} shot() {} }
   });
-  for (const file of ['../1-Seek/vehicle.js', 'steering.js', 'SpaceVehicle.js', 'SpatialGrid.js', 'Player.js', 'OrbitalCannon.js', 'AllyDrone.js', 'Enemy.js', 'Boss.js', 'ArenaGuard.js', 'BossArena.js', 'EnemyProjectile.js', 'Projectile.js', 'Pickup.js', 'AttackEffect.js', 'Particle.js', 'BossDeathEffect.js', 'SingularityField.js', 'ShelterBubble.js', 'DestinationGate.js', 'UpgradeCatalog.js', 'WeaponSystem.js', 'Game.js']) {
+  for (const file of ['../1-Seek/vehicle.js', 'steering.js', 'SpaceVehicle.js', 'SpatialGrid.js', 'Player.js', 'OrbitalCannon.js', 'AllyDrone.js', 'Enemy.js', 'Boss.js', 'ArenaGuard.js', 'BossArena.js', 'EnemyProjectile.js', 'Projectile.js', 'OrbitalBlade.js', 'RicochetProjectile.js', 'Pickup.js', 'AttackEffect.js', 'Particle.js', 'BossDeathEffect.js', 'SingularityField.js', 'ShelterBubble.js', 'DestinationGate.js', 'UpgradeCatalog.js', 'WeaponSystem.js', 'ProgressStats.js', 'Game.js']) {
     vm.runInContext(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'), scope);
   }
-  const exports = vm.runInContext('({ Vehicle, SpaceVehicle, SpatialGrid, ArenaGuard, BossArena, BossDeathEffect, OrbitalCannon, AllyDrone, SingularityField, ShelterBubble, DestinationGate, Particle, AttackEffect, EnemyProjectile, Steering, WeaponSystem, SpaceSurvivorsGame, Boss, Player, Enemy, Projectile, Pickup, UpgradeCatalog, createVector, sectorProfile, SECTOR_COUNT })', scope);
+  const exports = vm.runInContext('({ Vehicle, SpaceVehicle, SpatialGrid, ArenaGuard, BossArena, BossDeathEffect, OrbitalCannon, OrbitalBlade, RicochetProjectile, AllyDrone, SingularityField, ShelterBubble, DestinationGate, Particle, AttackEffect, EnemyProjectile, Steering, WeaponSystem, SpaceSurvivorsGame, Boss, Player, Enemy, Projectile, Pickup, UpgradeCatalog, createVector, sectorProfile, SECTOR_COUNT })', scope);
   exports.setFrame = value => { scope.frameCount = value; };
+  exports.installDebugRenderer = renderer => { scope.DebugRenderer = renderer; };
   return exports;
 }
+
+test('bilan: dégâts directs, explosion et brûlure comptent la vie réelle sans double élimination', () => {
+  const { SpaceSurvivorsGame, Enemy, Projectile, createVector } = load();
+  const game = new SpaceSurvivorsGame();
+  game.wave = 0;
+  game.startWave();
+  const direct = new Enemy(200, 200);
+  const splash = new Enemy(220, 200);
+  direct.hp = 5;
+  splash.hp = 4;
+  for (const enemy of [direct, splash]) enemy.game = game;
+  game.enemies = [direct, splash];
+  const shot = new Projectile(200, 200, createVector(0, 0), 100);
+  shot.game = game;
+  shot.splash = 80;
+  shot.updateProjectile(game.enemies);
+  assert.equal(game.stats.total.damage, 9);
+  game.collectDrops(false);
+  game.collectDrops(false);
+  assert.equal(game.stats.total.kills, 2);
+  const burned = new Enemy(400, 400);
+  burned.game = game;
+  burned.hp = 0.1;
+  burned.burnFrames = 10;
+  burned.burnDamage = 60;
+  burned.tickStatus();
+  assert.ok(Math.abs(game.stats.total.damage - 9.1) < 1e-9);
+});
+
+test('bilan: bouclier, invulnérabilité, niveaux et drones ne sont comptés qu’une fois', () => {
+  const { SpaceSurvivorsGame, AllyDrone } = load();
+  const game = new SpaceSurvivorsGame();
+  game.player.shield = 15;
+  game.player.armor = 0.5;
+  game.player.damage(40);
+  assert.equal(game.stats.total.hullLost, 5);
+  game.player.damage(40);
+  assert.equal(game.stats.total.hullLost, 5);
+  game.player.addXp(18);
+  assert.equal(game.stats.total.levels, 1);
+  const drone = new AllyDrone(game.player, 0);
+  drone.takeDamage(100);
+  drone.takeDamage(100);
+  assert.equal(game.stats.total.dronesLost, 1);
+});
+
+test('bilan: un secteur finalisé se fige, les totaux persistent et reset efface la partie', () => {
+  const { SpaceSurvivorsGame } = load();
+  const game = new SpaceSurvivorsGame();
+  game.started = true;
+  game.startWave();
+  game.stats.add('kills', 4);
+  game.stats.add('frames', 120);
+  game.completeSector();
+  const result = game.sectorComplete.result;
+  game.completeSector();
+  game.update();
+  assert.equal(result.kills, 4);
+  assert.equal(result.frames, 120);
+  assert.equal(game.stats.total.sectors, 1);
+  game.continueSector();
+  assert.equal(game.stats.sector.kills, 0);
+  assert.equal(game.stats.total.kills, 4);
+  assert.equal(result.kills, 4);
+  game.reset();
+  assert.equal(game.stats.total.kills, 0);
+});
+
+test('bilan: menus et animation du boss ne font pas avancer le temps de combat', () => {
+  const { SpaceSurvivorsGame } = load();
+  const game = new SpaceSurvivorsGame();
+  game.started = true;
+  game.update();
+  assert.equal(game.stats.total.frames, 1);
+  game.paused = true; game.update();
+  game.paused = false; game.levelUp = true; game.update();
+  game.levelUp = false;
+  game.bossDeath = {life: 2, updateEffect() { this.life--; }};
+  game.update();
+  assert.equal(game.stats.total.frames, 1);
+});
+
+test('bilan: gardes libérés exclus, boss et victoire finale comptés une seule fois', () => {
+  const { SpaceSurvivorsGame } = load();
+  const game = new SpaceSurvivorsGame();
+  game.wave = 14; game.startWave();
+  game.enemies = []; game.advanceMission();
+  game.boss.dead = true;
+  game.beginBossDeath();
+  assert.equal(game.stats.total.kills, 1);
+  assert.equal(game.stats.total.bosses, 1);
+  while (game.bossDeath) game.updateBossDeath();
+  game.completeSector();
+  assert.equal(game.stats.total.sectors, 1);
+  assert.ok(game.gameOver && game.victory);
+});
 
 test('améliorations: choix uniques, niveaux plafonnés, coque et bouclier', () => {
   const { WeaponSystem, Player } = load();
@@ -102,12 +199,106 @@ test('ricochet: la vitesse du projectile augmente à chaque niveau', () => {
     const shots = [];
     setFrame(0);
     system.fire(new Player(100, 100), [], shots);
-    assert.equal(shots.length, 1);
+    assert.equal(shots.length, level);
     return shots[0].vel.mag();
   };
   assert.ok(speedAt(8) > speedAt(1));
   assert.equal(speedAt(1), 6.75);
   assert.equal(speedAt(8), 12);
+});
+
+test('armes persistantes: 20 lames et 8 ricochets au maximum, aucune accumulation', () => {
+  const { WeaponSystem, Player, Vehicle, setFrame } = load();
+  const system = new WeaponSystem();
+  const player = new Player(640, 360);
+  system.levels.laser = 0;
+  system.levels.sword = system.levels.orbit = system.levels.ricochet = 8;
+  const shots = [];
+  for (let step = 0; step < 300; step++) { setFrame(step); system.fire(player, [], shots); }
+  assert.equal(shots.length, 28);
+  assert.equal(shots.filter(shot => shot.orbital).length, 20);
+  assert.ok(shots.every(shot => shot instanceof Vehicle && shot.applyForce === Vehicle.prototype.applyForce));
+  assert.ok(shots.every(shot => shot.life === Infinity && shot.evolved));
+});
+
+test('lames: orbite durable réactive, quatre quadrants parcourus et forces limitées', () => {
+  const { OrbitalBlade, Player } = load();
+  const player = new Player(640, 360);
+  const blade = new OrbitalBlade(player, 'sword', 0, 1, 8);
+  const quadrants = new Set();
+  for (let step = 0; step < 1800; step++) {
+    blade.updateProjectile([]);
+    assert.ok(blade.vel.mag() <= blade.maxSpeed + 1e-9);
+    const x = blade.pos.x - player.pos.x;
+    const y = blade.pos.y - player.pos.y;
+    if (step > 100) {
+      quadrants.add(`${x > 0},${y > 0}`);
+      assert.ok(Math.hypot(x, y) > 70 && Math.hypot(x, y) < 190);
+    }
+  }
+  assert.equal(quadrants.size, 4);
+  assert.equal(blade.life, Infinity);
+  const slow = new OrbitalBlade(player, 'sword', 0, 1, 1);
+  assert.ok(blade.orbitSpeed > slow.orbitSpeed);
+  blade.game = {debug: true, projectiles: [blade, slow]};
+  blade.updateProjectile([]);
+  assert.ok(blade.debugForce.mag() <= blade.maxForce + 1e-9);
+});
+
+test('ricochet: rebonds et impacts infinis, caméra mobile, délai de retouche et mémoire bornée', () => {
+  const { RicochetProjectile, Player, createVector } = load();
+  const player = new Player(640, 360);
+  const shot = new RicochetProjectile(player, 8, createVector(1, 0));
+  shot.game = {cameraBounds: {left: 0, right: 1280, top: 0, bottom: 720}};
+  for (let step = 0; step < 3000; step++) shot.updateProjectile([]);
+  assert.equal(shot.life, Infinity);
+  assert.equal(shot.bounces, Infinity);
+  assert.ok(shot.pos.x >= shot.radius && shot.pos.x <= 1280 - shot.radius);
+  shot.game.cameraBounds = {left: 5000, right: 6280, top: -4000, bottom: -3280};
+  shot.updateProjectile([]);
+  assert.ok(shot.pos.x >= 5000 + shot.radius && shot.pos.y <= -3280 - shot.radius);
+  shot.pos = createVector(5500, -3500);
+  shot.vel = createVector(0, 0);
+  shot.steer = () => {};
+  const enemy = {pos: shot.pos.copy(), hp: 10000, radius: 20};
+  shot.updateProjectile([enemy]);
+  const hpAfterFirst = enemy.hp;
+  for (let step = 0; step < 23; step++) shot.updateProjectile([enemy]);
+  assert.equal(enemy.hp, hpAfterFirst);
+  shot.updateProjectile([enemy]);
+  assert.ok(enemy.hp < hpAfterFirst);
+  assert.equal(shot.life, Infinity);
+  assert.equal(shot.hitEnemies.size, 0);
+  assert.equal(shot.effectEnemies.size, 0);
+});
+
+test('armes persistantes: conservation entre secteurs et disparition seulement à la nouvelle partie', () => {
+  const { SpaceSurvivorsGame } = load();
+  const game = new SpaceSurvivorsGame();
+  game.weaponSystem.levels.orbit = game.weaponSystem.levels.ricochet = 1;
+  game.weaponSystem.syncPersistent(game.player, game.projectiles);
+  const initial = [...game.projectiles];
+  game.startWave();
+  assert.ok(initial.every(shot => game.projectiles.includes(shot)));
+  game.enemies = []; game.advanceMission();
+  game.boss.dead = true; game.beginBossDeath();
+  assert.ok(initial.every(shot => game.projectiles.includes(shot)));
+  game.reset();
+  assert.equal(game.projectiles.length, 0);
+});
+
+test('lames: poursuivent le pilote mobile en vol libre avec arrive et locomotion héritée', () => {
+  const { OrbitalBlade, Player, createVector } = load();
+  const player = new Player(5000, -3000);
+  const blade = new OrbitalBlade(player, 'orbit', 0, 1, 8);
+  player.vel = createVector(4, 2);
+  for (let step = 0; step < 600; step++) {
+    player.update();
+    blade.updateProjectile([]);
+    assert.ok(blade.distanceTo(player) < 260);
+    assert.ok(blade.vel.mag() <= blade.maxSpeed + 1e-9);
+  }
+  assert.equal(blade.life, Infinity);
 });
 
 test('perforation: un ennemi ne reçoit pas deux fois le même projectile', () => {
@@ -438,6 +629,138 @@ test('quinze secteurs alternent combat avec boss et trajet, jusqu’au boss fina
   ]);
   assert.ok(sectorProfile(14).horde > sectorProfile(8).horde);
   assert.equal(sectorProfile(15).title, 'Le Cœur du Néant');
+});
+
+test('refuge: soin unique de 10 PV, plafond de vie et charge conservée à pleine vie', () => {
+  const { ShelterBubble, Player, createVector } = load();
+  const bubble = new ShelterBubble(100, 100);
+  const player = new Player(100, 100);
+  assert.equal(bubble.heal(player), 0);
+  assert.equal(bubble.healUsed, false);
+  player.hp = 75;
+  assert.equal(bubble.heal(player), 10);
+  assert.equal(player.hp, 85);
+  for (let step = 0; step < 1000; step++) bubble.heal(player);
+  assert.equal(player.hp, 85);
+  player.pos = createVector(400, 100); bubble.heal(player);
+  player.pos = createVector(100, 100);
+  assert.equal(bubble.heal(player), 0);
+  const second = new ShelterBubble(100, 100);
+  player.hp = 96;
+  assert.equal(second.heal(player), 4);
+  assert.equal(player.hp, 100);
+});
+
+test('refuge: fuite limitée, ennemis exclus même au centre et vitesse entrante annulée', () => {
+  const { ShelterBubble, Enemy, createVector } = load();
+  const bubble = new ShelterBubble(100, 100);
+  const enemy = new Enemy(260, 100);
+  bubble.steerAway(enemy);
+  assert.ok(enemy.acc.x > 0 && enemy.acc.mag() <= enemy.maxForce + 1e-9);
+  enemy.pos = createVector(500, 100); enemy.acc = createVector(0, 0);
+  bubble.steerAway(enemy);
+  assert.equal(enemy.acc.mag(), 0);
+  enemy.pos = createVector(240, 100); enemy.vel = createVector(-5, 2);
+  bubble.keepOutside(enemy);
+  assert.ok(enemy.distanceTo(bubble) >= bubble.radius + enemy.radius);
+  assert.equal(enemy.vel.x, 0);
+  assert.equal(enemy.vel.y, 2);
+  enemy.pos = bubble.pos.copy();
+  bubble.keepOutside(enemy);
+  assert.ok(Number.isFinite(enemy.pos.x) && enemy.distanceTo(bubble) > bubble.radius);
+});
+
+test('refuge: projectiles rapides absorbés sur leur segment et ricochets conservés', () => {
+  const { SpaceSurvivorsGame, ShelterBubble, EnemyProjectile, Projectile, RicochetProjectile, createVector } = load();
+  const game = new SpaceSurvivorsGame();
+  game.player.pos = createVector(400, 100);
+  const bubble = new ShelterBubble(100, 100, 70);
+  game.routeShelters = [bubble];
+  assert.equal(bubble.intersectsSegment(createVector(0, 177), createVector(200, 177), 7), true);
+  assert.equal(bubble.intersectsSegment(createVector(0, 178), createVector(200, 178), 7), false);
+  const hostile = new EnemyProjectile(0, 100, createVector(200, 0));
+  hostile.game = game; hostile.homing = false;
+  hostile.updateAgainst([game.player]);
+  assert.equal(hostile.life, 0);
+  const friendly = new Projectile(0, 100, createVector(200, 0), 100);
+  friendly.game = game;
+  const target = {pos: createVector(200, 100), radius: 20, hp: 100};
+  friendly.updateProjectile([target]);
+  assert.equal(friendly.life, 0);
+  assert.equal(target.hp, 100);
+  const ricochet = new RicochetProjectile(game.player, 1, createVector(-1, 0));
+  ricochet.pos = createVector(172, 100);
+  ricochet.updateProjectile([]);
+  assert.equal(ricochet.life, Infinity);
+  assert.ok(ricochet.pos.x >= 175 && ricochet.vel.x > 0);
+});
+
+test('refuge: désarme pilote, drones, impacts permanents et brûlures, puis reprend dehors', () => {
+  const { SpaceSurvivorsGame, ShelterBubble, AllyDrone, Enemy, RicochetProjectile, createVector, setFrame } = load();
+  const game = new SpaceSurvivorsGame();
+  const player = game.player;
+  const bubble = new ShelterBubble(player.pos.x, player.pos.y, 156);
+  game.routeShelters = [bubble];
+  game.weaponSystem.levels.swarm = 1;
+  game.weaponSystem.levels.singularity = 1;
+  setFrame(0);
+  const shots = [];
+  game.weaponSystem.fire(player, [], shots);
+  assert.equal(shots.length, 0);
+  assert.equal(game.fields.length, 0);
+  const enemy = new Enemy(player.pos.x + 200, player.pos.y);
+  enemy.game = game;
+  const drone = new AllyDrone(player, 0); drone.fireCooldown = 0;
+  drone.updateAlly([enemy], shots);
+  assert.equal(shots.length, 0);
+  const hp = drone.hp;
+  drone.takeDamage(100);
+  assert.equal(drone.hp, hp);
+  const ricochet = new RicochetProjectile(player, 1, createVector(1, 0));
+  ricochet.pos = enemy.pos.copy();
+  ricochet.updateProjectile([enemy]);
+  assert.equal(enemy.hp, 18);
+  assert.equal(ricochet.life, Infinity);
+  enemy.burnFrames = 100; enemy.burnDamage = 60;
+  enemy.tickStatus();
+  assert.equal(enemy.hp, 18);
+  player.pos = createVector(bubble.pos.x + 400, bubble.pos.y);
+  game.weaponSystem.fire(player, [enemy], shots);
+  assert.ok(shots.length > 0);
+  enemy.tickStatus();
+  assert.equal(enemy.hp, 17);
+});
+
+test('refuge: intégration du soin et suspension des cages, sans soin continu', () => {
+  const { SpaceSurvivorsGame } = load();
+  const game = new SpaceSurvivorsGame();
+  game.wave = 1; game.startWave(); game.started = true;
+  game.player.hp = 60; game.player.regeneration = 60;
+  game.activateSingularity();
+  game.update();
+  assert.equal(game.player.hp, 70);
+  assert.equal(game.fields.length, 0);
+  for (let step = 0; step < 30; step++) game.update();
+  assert.equal(game.player.hp, 70);
+});
+
+test('debug: tous les tirs et le canon orbital sont rendus sans modifier leur physique', () => {
+  const { SpaceSurvivorsGame, Projectile, EnemyProjectile, createVector, installDebugRenderer } = load();
+  const game = new SpaceSurvivorsGame();
+  game.debug = true;
+  const shot = new Projectile(game.player.pos.x, game.player.pos.y, createVector(1, 0), 1);
+  const hostile = new EnemyProjectile(game.player.pos.x, game.player.pos.y, createVector(-1, 0));
+  game.projectiles = [shot]; game.enemyProjectiles = [hostile];
+  game.weaponSystem.fire(game.player, [], game.projectiles);
+  const cannon = game.weaponSystem.primaryCannon;
+  const observed = [];
+  installDebugRenderer({show(entity) { observed.push(entity); }});
+  for (const entity of [game.player, cannon, ...game.projectiles, hostile]) entity.show = () => {};
+  const before = shot.pos.copy();
+  game.draw();
+  assert.ok(observed.includes(shot) && observed.includes(hostile) && observed.includes(cannon));
+  assert.equal(shot.pos.x, before.x);
+  assert.equal(shot.vel.x, 1);
 });
 
 test('refuge-bulle: protection seulement à l’intérieur, entité issue du Vehicle', () => {

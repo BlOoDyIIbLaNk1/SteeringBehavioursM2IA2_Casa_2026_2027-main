@@ -20,6 +20,12 @@ const DebugRenderer = {
       circle(agent.debugTarget.x, agent.debugTarget.y, agent.debugRadius * 2);
       drawingContext.setLineDash([]);
     }
+    if (agent.debugTarget) {
+      drawingContext.setLineDash([3, 5]); stroke(218, 198, 124, 100);
+      line(agent.pos.x, agent.pos.y, agent.debugTarget.x, agent.debugTarget.y);
+      drawingContext.setLineDash([]);
+      circle(agent.debugTarget.x, agent.debugTarget.y, 7);
+    }
     pop();
     this.arrow(agent.pos.x, agent.pos.y, agent.vel, 16, '#9ae6a0');
     this.arrow(agent.pos.x, agent.pos.y, agent.debugForce, 130, '#ffae70');

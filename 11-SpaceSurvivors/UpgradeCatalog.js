@@ -2,9 +2,9 @@
 const UpgradeCatalog = {
   laser: { name: 'Canon orbital', description: 'Tourne autour du vaisseau et accélère ses tirs à chaque niveau.', icon: 'M6 26 26 6M8 18l6 6M18 8l6 6', type: 'weapon' },
   missile: { name: 'Missile chercheur', description: 'Un missile corrige sa trajectoire vers sa cible.', icon: 'M12 23 9 14 23 5l4 4-9 14zM10 22l-5 5', type: 'weapon' },
-  sword: { name: 'Lames solaires', description: 'Des lames courbes frappent à courte portée.', icon: 'M8 26 25 9l2-5-5 2L5 23M5 18l9 9', type: 'weapon' },
-  ricochet: { name: 'Prisme ricochet', description: 'Ses projectiles gagnent en vitesse et rebondissent sur les bords.', icon: 'M5 8h22v18H5M9 21l8-8 6 6', type: 'weapon' },
-  orbit: { name: 'Essaim de lames', description: 'Émet régulièrement des lames autour du vaisseau.', icon: 'M7 23c-7-7 3-18 13-15s12 13 3 17-20-1-16-8', type: 'weapon' },
+  sword: { name: 'Lames solaires', description: 'Une couronne permanente de lames. Chaque niveau renforce sa rotation et ses dégâts.', icon: 'M8 26 25 9l2-5-5 2L5 23M5 18l9 9', type: 'weapon' },
+  ricochet: { name: 'Prisme ricochet', description: 'Des prismes permanents rebondissent sans limite. Un prisme de plus par niveau.', icon: 'M5 8h22v18H5M9 21l8-8 6 6', type: 'weapon' },
+  orbit: { name: 'Essaim de lames', description: 'Une grande couronne tourne en sens inverse. Jusqu’à quatorze lames évoluées.', icon: 'M7 23c-7-7 3-18 13-15s12 13 3 17-20-1-16-8', type: 'weapon' },
   pulse: { name: 'Impulsion radiale', description: 'Une salve de huit projectiles dans toutes les directions.', icon: 'M16 3v7M16 22v7M3 16h7M22 16h7M6 6l5 5M21 21l5 5', type: 'weapon' },
   nova: { name: 'Nova solaire', description: 'Un cercle de seize projectiles repousse la pression.', icon: 'M16 3l3 9 10 4-10 3-3 10-3-10-10-3 10-4z', type: 'weapon' },
   rail: { name: 'Canon rail', description: 'Un tir rapide traverse plusieurs adversaires.', type: 'weapon', interval: 90, damage: 30, speed: 14, sprite: 'laser', pierce: 4 },

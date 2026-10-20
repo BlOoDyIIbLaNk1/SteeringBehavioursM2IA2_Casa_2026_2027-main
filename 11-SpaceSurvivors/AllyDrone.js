@@ -14,10 +14,14 @@ class AllyDrone extends SpaceVehicle {
   }
 
   takeDamage(amount) {
+    if (this.game?.isSheltered?.(this.pos)) return false;
     if (this.dead || millis() < this.invulnerableUntil) return false;
     this.hp -= amount;
     this.invulnerableUntil = millis() + 260;
-    if (this.hp <= 0) this.dead = true;
+    if (this.hp <= 0) {
+      this.dead = true;
+      this.game?.stats?.add('dronesLost');
+    }
     return true;
   }
 
@@ -30,6 +34,8 @@ class AllyDrone extends SpaceVehicle {
     this.applyForce(Steering.arrive(this, formationTarget, 90));
     this.applyForce(Steering.separation(this, [this.player, ...(this.player.game?.allies || [])], 30).mult(0.75));
     super.update();
+
+    if (this.game?.canAttack?.() === false || this.game?.isSheltered?.(this.pos)) return;
 
     this.fireCooldown--;
     if (this.fireCooldown > 0) return;

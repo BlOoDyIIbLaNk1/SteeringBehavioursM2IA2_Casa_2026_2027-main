@@ -72,3 +72,33 @@ test('D synchronise la case debug, ignore la répétition et les champs de saisi
   assert.equal(nodes['debug-toggle'].checked, false);
   assert.equal(nodes['debug-legend'].hidden, true);
 });
+
+test('bilans: durée en minutes et secondes, instantanés indépendants et rendu mis en cache', () => {
+  const nodes = Object.fromEntries(['sector-menu', 'sector-results', 'sector-complete-label', 'sector-next-title', 'sector-next-mode', 'sector-next-description', 'sector-loadout-summary'].map(id => [id, {}]));
+  let renders = 0;
+  Object.defineProperty(nodes['sector-results'], 'innerHTML', {set(value) { this.rendered = value; renders++; }});
+  const context = vm.createContext({document: {getElementById: id => nodes[id]}});
+  for (const file of ['ProgressStats.js', 'SectorMenu.js']) vm.runInContext(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'), context);
+  const { ProgressStats, SectorMenu } = vm.runInContext('({ProgressStats, SectorMenu})', context);
+  assert.equal(ProgressStats.duration(59 * 60), '0:59');
+  assert.equal(ProgressStats.duration(60 * 60), '1:00');
+  assert.equal(ProgressStats.duration(125 * 60), '2:05');
+  const stats = new ProgressStats();
+  stats.add('kills', 3);
+  stats.add('damage', Infinity);
+  stats.add('kills', -4);
+  const result = stats.snapshot('sector');
+  stats.startSector();
+  assert.equal(result.kills, 3);
+  assert.equal(stats.total.damage, 0);
+  const menu = new SectorMenu();
+  const game = {wave: 1, player: {level: 2}, sectorComplete: {result, next: {sector: 2, mode: 'sanctuary', hint: 'Suivez la flèche.'}}};
+  menu.update(game);
+  menu.update(game);
+  assert.equal(renders, 1);
+  assert.ok(nodes['sector-results'].rendered.includes('ENNEMIS DÉTRUITS'));
+  assert.ok(nodes['sector-results'].rendered.includes('<dd>3</dd>'));
+  game.sectorComplete = null;
+  menu.update(game);
+  assert.equal(nodes['sector-menu'].hidden, true);
+});

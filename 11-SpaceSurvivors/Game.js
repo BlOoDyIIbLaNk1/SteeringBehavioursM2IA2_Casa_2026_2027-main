@@ -25,6 +25,9 @@ class SpaceSurvivorsGame {
     this.player = new Player(width / 2, height / 2); this.weaponSystem = new WeaponSystem();
     this.audio = this.audio || new AudioSystem();
     this.player.game = this;
+    this.stats = new ProgressStats();
+    this.lastSectorResult = null;
+    this.resultsRendered = false;
     this.enemies = []; this.projectiles = []; this.enemyProjectiles = []; this.effects = []; this.particles = []; this.pickups = []; this.wave = 0; this.spawnTimer = 0;
     this.allies = []; this.fields = [];
     this.maxEffects = 60;
@@ -76,10 +79,12 @@ class SpaceSurvivorsGame {
       return;
     }
     this.wave++;
+    this.stats.startSector();
+    this.lastSectorResult = null;
     this.sector = sectorProfile(this.wave);
     // Une arrivée peut laisser des poursuivants en vie : clôture de la scène.
     this.enemies = [];
-    this.projectiles = [];
+    this.projectiles = this.projectiles.filter(shot => shot.persistent);
     this.enemyProjectiles = [];
     this.fields = [];
     this.boss = null;
@@ -117,6 +122,14 @@ class SpaceSurvivorsGame {
     return this.routeShelters.some(bubble => bubble.protects(position));
   }
 
+  canAttack() {
+    return !this.isSheltered(this.player.pos);
+  }
+
+  blockProjectile(shot, start) {
+    return this.routeShelters.some(bubble => bubble.blockProjectile(shot, start));
+  }
+
   advanceMission() {
     if (!this.sector || this.gameOver || this.levelUp || this.paused || this.sectorComplete || this.bossDeath) return;
     if (this.destination) {
@@ -140,8 +153,11 @@ class SpaceSurvivorsGame {
   }
 
   completeSector() {
+    if (this.lastSectorResult || this.gameOver) return;
+    this.stats.add('sectors');
+    this.lastSectorResult = this.stats.snapshot('sector');
     if (this.wave === SECTOR_COUNT) { this.victory = true; this.gameOver = true; return; }
-    this.sectorComplete = { completed: this.wave, next: sectorProfile(this.wave + 1) };
+    this.sectorComplete = { completed: this.wave, next: sectorProfile(this.wave + 1), result: this.lastSectorResult };
   }
 
   beginBossDeath() {
@@ -150,7 +166,7 @@ class SpaceSurvivorsGame {
     this.collectDrops(false);
     this.bossDeath = new BossDeathEffect(this.boss);
     this.enemies = [];
-    this.projectiles = [];
+    this.projectiles = this.projectiles.filter(shot => shot.persistent);
     this.enemyProjectiles = [];
     this.fields = [];
     this.effects = [];
@@ -198,9 +214,10 @@ class SpaceSurvivorsGame {
     if (this.bossDeath) { this.updateBossDeath(); return; }
     this.updateCamera();
     this.elapsed += 1 / 60;
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.regeneration / 60);
+    if (!this.isSheltered(this.player.pos)) this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.regeneration / 60);
     if (!this.sector) this.startWave();
     if (this.gameOver) return;
+    this.stats.add('frames');
     if (this.sector?.mode === 'sanctuary' && this.hordeRemaining > 0) {
       this.hordeSpawnClock++;
       if (this.hordeSpawnClock >= 18 && this.enemies.length < 80) {
@@ -217,15 +234,19 @@ class SpaceSurvivorsGame {
     this.player.update();
     this.bossArena?.contain(this.player);
     this.updateCamera();
+    for (const bubble of this.routeShelters) bubble.heal(this.player);
+    if (!this.canAttack()) this.fields = [];
     for (const ally of this.allies) ally.updateAlly(this.enemies, this.projectiles);
     this.weaponSystem.fire(this.player, this.enemies, this.projectiles);
     for (const enemy of this.enemies) { enemy.caged = false; }
     for (const field of this.fields) field.updateField(this.enemies);
     for (const enemy of this.enemies) {
+      for (const bubble of this.routeShelters) bubble.steerAway(enemy);
       if (enemy === this.boss) this.bossArena?.steerInside(enemy);
       enemy.updateAgainst(this.player, this.enemyGrid.query(enemy.pos, Math.max(100, enemy.radius * 3) + 8), this.enemyProjectiles);
       if (enemy === this.boss) this.bossArena?.contain(enemy);
       for (const field of this.fields) field.contain(enemy);
+      for (const bubble of this.routeShelters) bubble.keepOutside(enemy);
       enemy.tryShoot(this.player, this.enemyProjectiles);
     }
     this.enemyGrid.rebuild(this.enemies);
@@ -259,7 +280,11 @@ class SpaceSurvivorsGame {
     this.particles = this.particles.filter(particle => particle.life > 0);
     this.enemies = this.enemies.filter(e => !e.dead);
     this.allies = this.allies.filter(ally => !ally.dead);
-    if (this.projectiles.length > 500) this.projectiles.splice(0, this.projectiles.length - 500);
+    if (this.projectiles.length > 500) {
+      const persistent = this.projectiles.filter(shot => shot.persistent);
+      const temporary = this.projectiles.filter(shot => !shot.persistent);
+      this.projectiles = [...persistent, ...temporary.slice(-(500 - persistent.length))];
+    }
     if (this.enemyProjectiles.length > 260) this.enemyProjectiles.splice(0, this.enemyProjectiles.length - 260);
     this.advanceMission();
   }
@@ -267,6 +292,10 @@ class SpaceSurvivorsGame {
     for (const enemy of this.enemies) {
       if (enemy.dead && !enemy.dropDone) {
         enemy.dropDone = true;
+        if (!enemy.invulnerable) {
+          this.stats.add('kills');
+          if (enemy === this.boss) this.stats.add('bosses');
+        }
         const pickup = new Pickup(enemy.pos.x, enemy.pos.y, 'xp', enemy.xpValue);
         pickup.game = this;
         this.pickups.push(pickup);
@@ -315,7 +344,7 @@ class SpaceSurvivorsGame {
     this.weaponSystem.primaryCannon?.show();
     if (this.debug) {
       const cannon = this.weaponSystem.primaryCannon ? [this.weaponSystem.primaryCannon] : [];
-      for (const entity of [this.player, ...cannon, ...this.enemies, ...this.allies, ...this.pickups]) {
+      for (const entity of [this.player, ...cannon, ...this.projectiles, ...this.enemyProjectiles, ...this.enemies, ...this.allies, ...this.pickups]) {
         if (visible(entity)) DebugRenderer.show(entity);
       }
     }
